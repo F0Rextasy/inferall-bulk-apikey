@@ -514,7 +514,7 @@ async function mint(exits, count) {
       if (!chrome) break;
       let page = null;
       try {
-        page = await Page.open(port);
+        page = await Page.open(port, exit);
         const rec = await mintOnExit(page, exit, SITEKEY_FALLBACK);
         const proof = await proveKey(rec.key);
         rec.proof = proof;
@@ -570,7 +570,7 @@ async function discoverAnonKey(port, exit) {
   const chrome = await launchChrome(exit, port);
   let page = null;
   try {
-    page = await Page.open(port);
+    page = await Page.open(port, exit);
     await page.goto(`${BASE}/auth`, { waitMs: 4000 });
     const chunks = await page.eval(`Array.from(document.querySelectorAll('script[src]')).map((s) => s.src).filter((s) => /_next\\/static|chunks/.test(s))`);
     const found = await page.eval(`(async () => {
@@ -603,7 +603,7 @@ async function screen(exits) {
     if (!chrome) { log(`✖ ${proxyLabel(exit)}: chrome would not start`); continue; }
     let page = null;
     try {
-      page = await Page.open(port);
+      page = await Page.open(port, exit);
       const r = await ipage(page, `${BASE}/auth`, { method: 'GET' });
       const reached = r.status === 200 && /inferall|create your account/i.test(r.text);
       if (reached) ok++;

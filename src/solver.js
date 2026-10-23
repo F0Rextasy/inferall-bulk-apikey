@@ -30,7 +30,20 @@ const NS = '__ia';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const log = (...a) => console.log(`[${new Date().toISOString().slice(11, 19)}]`, ...a);
 
+/** `http://host:port` for Chrome's --proxy-server. Chrome takes no userinfo in that
+ *  URL (net::ERR_NO_SUPPORTED_PROXIES), so a credentialed exit's 407 is answered
+ *  here, on the page's own session, through the Fetch domain. */
 const chromeProxy = (p) => (p ? `${p.protocol}://${p.host}:${p.port}` : null);
+async function proxyAuth(cdp, exit) {
+  if (!exit || !exit.username) return;
+  cdp.on('Fetch.authRequired', (p) => cdp.send('Fetch.continueWithAuth', {
+    requestId: p.requestId,
+    authChallengeResponse: { response: 'ProvideCredentials', username: exit.username, password: exit.password || '' },
+  }).catch(() => {}));
+  cdp.on('Fetch.requestPaused', (p) => cdp.send('Fetch.continueRequest', { requestId: p.requestId }).catch(() => {}));
+  await cdp.send('Fetch.enable', { handleAuthRequests: true });
+  log(`proxy auth via Fetch.handleAuthRequests (${chromeProxy(exit)})`);
+}
 
 
 // --------------------------------------------------------------------- chrome
@@ -157,7 +170,7 @@ class Cdp {
 class Page {
   constructor(cdp) { this.cdp = cdp; }
 
-  static async open(port) {
+  static async open(port, exit = null) {
     const http = require('http');
     const json = (method, p) => new Promise((resolve, reject) => {
       const req = http.request({ host: '127.0.0.1', port, path: p, method, timeout: 5000 }, (res) => {
@@ -174,6 +187,7 @@ class Page {
     if (!target || !target.webSocketDebuggerUrl) throw new Error('could not open a Chrome tab');
     const page = new Page(await Cdp.connect(target.webSocketDebuggerUrl));
     await page.cdp.send('Page.enable');
+    await proxyAuth(page.cdp, exit);
     page.targetId = target.id;
     return page;
   }
@@ -326,10 +340,11 @@ async function solveCaptcha({ type = 'turnstile', sitekey, url, proxy = null } =
   if (!url) throw new Error('solveCaptcha: url is required');
   if (!sitekey) throw new Error('solveCaptcha: sitekey is required');
   const port = await freePort();
-  const chrome = await launchChrome(toExit(proxy), port);
+  const exit = toExit(proxy);
+  const chrome = await launchChrome(exit, port);
   let page = null;
   try {
-    page = await Page.open(port);
+    page = await Page.open(port, exit);
     await page.goto(url, { waitMs: 3000 });
     const r = await obtainToken(page.cdp, page, sitekey, 'solve');
     if (!r.token) throw new Error('solveCaptcha: turnstile did not mint a token');
