@@ -1,0 +1,34 @@
+{
+  "name": "inferall-bulk-apikey",
+  "version": "1.0.0",
+  "description": "Bulk-create InferAll accounts and API keys — OpenAI-compatible inference on https://api.inferall.ai/v1 across 83 model ids + 9Router connector.",
+  "license": "MIT",
+  "type": "commonjs",
+  "bin": {
+    "inferall-bulk-apikey": "src/cli.js",
+    "inferall-bulk-apikey-launcher": "src/launcher.js"
+  },
+  "main": "src/cli.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node src/launcher.js",
+    "mint": "node src/cli.js",
+    "9router": "node src/connect-9router.js",
+    "omniroute": "node src/connect-omniroute.js"
+  },
+  "keywords": [
+    "api-key",
+    "bulk",
+    "register",
+    "launcher",
+    "inferall",
+    "apikey"
+  ],
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE"
+  ]
+}
