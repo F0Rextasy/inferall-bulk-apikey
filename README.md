@@ -110,6 +110,18 @@ A key is written to `keys.txt` **only** after the gate passes: `/v1/models` → 
 
 `src/launcher.js` (same banner as this README) boots the connector wrapper: mint, verify, screen the proxy list, show the remembered settings, and register the keys in a local 9Router — the CLI flags stay configurable without reading the source, and the answers live in `launcher.config.json`. `src/connect-9router.js` registers the provider under prefix `inferall` with `openai/gpt-oss-20b` as the default model, one connection per key in `keys.txt`.
 
+## 🚀 One command
+
+The captcha is solved for you — one command mints N verified keys:
+
+```bash
+node src/cli.js --count N        # N accounts, serial — the Turnstile widget is answered in a real Chrome
+```
+
+`--auto` is the default and nothing has to be passed: the embedded `src/solver.js` opens a headed Chrome, mounts the Turnstile widget and returns the token automatically. `--dry` prints the resolved plan (count, exit pool, solver, model) and exits with **no file written and no network call**. `node src/launcher.js` (or `npm start`) is the same path as a menu.
+
+> ⚠️ **Terms & account risk.** This is an automation tool, not an account vendor. Bulk sign-ups and key minting are entirely your responsibility: they may breach the provider's Terms of Service and can get addresses, exits or accounts blocked. Use it only on infrastructure you are allowed to automate, and keep the request rate low.
+
 ## ✅ Verified working — every key is tested
 
 Lab run **2026-10-20**, through one pinned WARP exit (`socks5h://127.0.0.1:40000`):
