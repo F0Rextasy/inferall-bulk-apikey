@@ -62,6 +62,7 @@ const ROOT = path.basename(__dirname) === 'src' ? path.resolve(__dirname, '..') 
 const KEYS_FILE = path.join(ROOT, 'keys.txt');
 const ACCOUNTS_FILE = path.join(ROOT, 'accounts.json');
 const OUT_DIR = path.join(ROOT, 'out');
+/** Dead keys leave keys.txt and are parked here — repo root, like keys.txt. */
 const KEYS_DEAD_FILE = path.join(ROOT, 'keys-dead.txt');
 
 // ------------------------------------------------------------------ provider
