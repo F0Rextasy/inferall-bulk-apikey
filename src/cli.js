@@ -479,11 +479,14 @@ const appendKey = (key) => {
   fs.appendFileSync(KEYS_FILE, (fs.existsSync(KEYS_FILE) && fs.statSync(KEYS_FILE).size ? '\n' : '') + key + '\n');
   return true;
 };
-/** Dead/unverified keys are listed in keys-dead.txt so they can be retried later. */
-const appendDeadKey = (key) => {
-  const seen = fs.existsSync(KEYS_DEAD_FILE) ? fs.readFileSync(KEYS_DEAD_FILE, 'utf8').split(/\r?\n/) : [];
+/** A key the panel refused outright (401/403/quota/ban) is parked in
+ *  keys-dead.txt as `key<TAB>sebep<TAB>ISO`, so it can be retried later.
+ *  A transport failure or a 429 is not a verdict — that key stays in keys.txt. */
+const appendDeadKey = (key, why) => {
+  if (!key || ![401, 402, 403].includes(Number(why))) return false;
+  const seen = fs.existsSync(KEYS_DEAD_FILE) ? fs.readFileSync(KEYS_DEAD_FILE, 'utf8').split(/\r?\n/).map((s) => s.trim().split('\t')[0]) : [];
   if (seen.includes(key)) return false;
-  fs.appendFileSync(KEYS_DEAD_FILE, (fs.existsSync(KEYS_DEAD_FILE) && fs.statSync(KEYS_DEAD_FILE).size ? '\n' : '') + key + '\n');
+  fs.appendFileSync(KEYS_DEAD_FILE, `${key}\t${why}\t${new Date().toISOString()}\n`);
   return true;
 };
 const readAccounts = () => { try { return JSON.parse(fs.readFileSync(ACCOUNTS_FILE, 'utf8')); } catch (e) { return []; } };
@@ -517,7 +520,7 @@ async function mint(exits, count) {
         rec.proof = proof;
         if (!proof.live) {
           rec.status = 'key-unverified';
-          appendDeadKey(rec.key);
+          appendDeadKey(rec.key, proof.models && proof.models.status);
           saveAccount(rec);
           log(`  ✖ key not proven: ${JSON.stringify(proof).slice(0, 220)}`);
           continue;
@@ -548,7 +551,7 @@ async function verifyOnly() {
   let live = 0;
   for (const key of keys) {
     const proof = await proveKey(key);
-    if (proof.live) live++; else appendDeadKey(key);
+    if (proof.live) live++; else appendDeadKey(key, proof.models && proof.models.status);
     log(`${key.slice(0, 12)}… models=${proof.models.status}(${proof.models.ids}) sanity=${proof.sane} tools=${proof.tools.called ? proof.tools.name : 'no'} ${proof.live ? 'LIVE' : 'DEAD'}`);
   }
   log(`live: ${live}/${keys.length}`);
